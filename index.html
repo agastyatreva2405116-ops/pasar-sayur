@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel - Pasar Sayur Layak</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    body { background: #f4f8f3; color: #1f2937; }
+    header {
+      background: linear-gradient(135deg, #2f855a, #276749);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    header h1 { margin-bottom: 8px; }
+    nav { margin-top: 10px; }
+    nav a, nav button {
+      color: white;
+      background: transparent;
+      border: none;
+      text-decoration: none;
+      margin: 0 10px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 15px;
+    }
+    .container {
+      width: 90%;
+      max-width: 1100px;
+      margin: 30px auto;
+    }
+    .panel {
+      background: white;
+      padding: 22px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      border: 1px solid #edf2f7;
+      margin-bottom: 24px;
+      animation: fadeUp 0.8s ease;
+    }
+    .section-title {
+      margin-bottom: 12px;
+      font-size: 28px;
+      color: #2f855a;
+    }
+    .muted-text {
+      color: #718096;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+    form input, form select {
+      width: 100%;
+      padding: 12px 14px;
+      margin-top: 10px;
+      border: 1px solid #cbd5e0;
+      border-radius: 10px;
+      outline: none;
+    }
+    form input:focus, form select:focus {
+      border-color: #2f855a;
+      box-shadow: 0 0 0 3px rgba(47,133,90,0.12);
+    }
+    button {
+      margin-top: 12px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #2f855a;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.25s ease;
+    }
+    button:hover { background: #276749; transform: translateY(-2px); }
+    .btn-danger { background: #c53030; }
+    .btn-danger:hover { background: #9b2c2c; }
+    .list { list-style: none; margin-top: 14px; }
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid #e2e8f0;
+      flex-wrap: wrap;
+    }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    footer {
+      text-align: center;
+      padding: 20px;
+      background: #2f855a;
+      color: white;
+      margin-top: 40px;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Admin Panel</h1>
+    <p>Kelola akun dan produk Pasar Sayur Layak</p>
+    <nav>
+      <a href="produk.html">Halaman Produk</a>
+      <button onclick="logoutUser()">Logout</button>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="panel">
+      <h2 class="section-title">Informasi Admin</h2>
+      <p class="muted-text" id="admin-info"></p>
+    </div>
+
+    <div class="panel">
+      <h2 class="section-title">Daftarkan Akun Baru</h2>
+      <p class="muted-text">Hanya admin yang bisa membuat akun baru.</p>
+      <form id="register-form" onsubmit="registerUser(event)">
+        <input type="text" id="registerUsername" placeholder="Buat username" required />
+        <input type="password" id="registerPassword" placeholder="Buat password" required />
+        <select id="registerRole" required>
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button type="submit">Daftarkan Akun</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2 class="section-title">Daftar Akun</h2>
+      <p class="muted-text">Akun admin bawaan tidak bisa dihapus.</p>
+      <ul class="list" id="user-list"></ul>
+    </div>
+
+    <div class="panel">
+      <h2 class="section-title">Tambah Produk</h2>
+      <form onsubmit="tambahProduk(event)">
+        <input type="text" id="produkNama" placeholder="Nama produk" required />
+        <input type="number" id="produkHarga" placeholder="Harga" required />
+        <input type="text" id="produkDeskripsi" placeholder="Deskripsi singkat" required />
+        <input type="text" id="produkGambar" placeholder="Link gambar produk" required />
+        <button type="submit">Tambah Produk</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2 class="section-title">Kelola Produk</h2>
+      <ul class="list" id="product-list"></ul>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 Pasar Sayur Layak</p>
+  </footer>
+
+  <script>
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser) {
+      alert('Silakan login dulu.');
+      window.location.href = 'login.html';
+    }
+    if (currentUser.role !== 'admin') {
+      alert('Halaman ini hanya untuk admin.');
+      window.location.href = 'produk.html';
+    }
+
+    const defaultProducts = [
+      {
+        nama: 'Wortel Grade B',
+        harga: 8000,
+        deskripsi: 'Bentuk tidak seragam, tapi tetap segar dan cocok untuk sup atau tumisan.',
+        gambar: 'https://images.unsplash.com/photo-1447175008436-170170753d52?auto=format&fit=crop&w=800&q=80'
+      },
+      {
+        nama: 'Tomat Panen Sore',
+        harga: 9500,
+        deskripsi: 'Ada sedikit baret alami, tetap layak konsumsi dan enak untuk sambal.',
+        gambar: 'https://images.unsplash.com/photo-1546470427-e26264be0b0d?auto=format&fit=crop&w=800&q=80'
+      },
+      {
+        nama: 'Kentang Harian',
+        harga: 11000,
+        deskripsi: 'Ukuran campur, cocok untuk goreng, rebus, atau sup rumahan.',
+        gambar: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=800&q=80'
+      },
+      {
+        nama: 'Bayam Ikat Hemat',
+        harga: 4000,
+        deskripsi: 'Panen pagi, segar, cocok untuk sayur bening dan tumis.',
+        gambar: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=800&q=80'
+      }
+    ];
+
+    let users = JSON.parse(localStorage.getItem('users')) || [
+      { username: 'admin', password: '12345', role: 'admin' }
+    ];
+    let products = JSON.parse(localStorage.getItem('products')) || defaultProducts;
+
+    function saveUsers() {
+      localStorage.setItem('users', JSON.stringify(users));
+    }
+
+    function saveProducts() {
+      localStorage.setItem('products', JSON.stringify(products));
+    }
+
+    function formatRupiah(angka) {
+      return 'Rp' + angka.toLocaleString('id-ID');
+    }
+
+    function registerUser(event) {
+      event.preventDefault();
+      const username = document.getElementById('registerUsername').value.trim();
+      const password = document.getElementById('registerPassword').value.trim();
+      const role = document.getElementById('registerRole').value;
+
+      if (users.some(user => user.username === username)) {
+        alert('Username sudah dipakai.');
+        return;
+      }
+
+      users.push({ username, password, role });
+      saveUsers();
+      event.target.reset();
+      renderUsers();
+      alert('Akun baru berhasil ditambahkan.');
+    }
+
+    function renderUsers() {
+      const userList = document.getElementById('user-list');
+      userList.innerHTML = '';
+
+      users.forEach((user, index) => {
+        const item = document.createElement('li');
+        item.className = 'list-item';
+
+        const disableDelete = user.username === 'admin' && user.role === 'admin';
+        item.innerHTML = `<div><strong>${user.username}</strong><br><span class="muted-text">Role: ${user.role}</span></div>
+          <div class="actions">
+            <button onclick="editUser(${index})">Edit</button>
+            <button onclick="hapusUser(${index})" class="btn-danger" ${disableDelete ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>Hapus</button>
+          </div>`;
+        userList.appendChild(item);
+      });
+    }
+
+    function editUser(index) {
+      const user = users[index];
+      const usernameBaru = prompt('Edit username:', user.username);
+      if (!usernameBaru) return;
+      const passwordBaru = prompt('Edit password:', user.password);
+      if (!passwordBaru) return;
+      const roleBaru = prompt('Edit role (admin/user):', user.role);
+      if (!roleBaru || !['admin','user'].includes(roleBaru)) {
+        alert('Role harus admin atau user.');
+        return;
+      }
+
+      if (user.username === 'admin' && user.role === 'admin' && roleBaru !== 'admin') {
+        alert('Role admin bawaan tidak boleh diubah.');
+        return;
+      }
+
+      users[index] = { username: usernameBaru, password: passwordBaru, role: roleBaru };
+      saveUsers();
+      renderUsers();
+      alert('Akun berhasil diperbarui.');
+    }
+
+    function hapusUser(index) {
+      const user = users[index];
+      if (user.username === 'admin' && user.role === 'admin') {
+        alert('Akun admin bawaan tidak bisa dihapus.');
+        return;
+      }
+      if (!confirm('Yakin ingin menghapus akun ini?')) return;
+      users.splice(index, 1);
+      saveUsers();
+      renderUsers();
+    }
+
+    function tambahProduk(event) {
+      event.preventDefault();
+      const nama = document.getElementById('produkNama').value;
+      const harga = Number(document.getElementById('produkHarga').value);
+      const deskripsi = document.getElementById('produkDeskripsi').value;
+      const gambar = document.getElementById('produkGambar').value;
+
+      products.push({ nama, harga, deskripsi, gambar });
+      saveProducts();
+      renderProducts();
+      event.target.reset();
+      alert('Produk baru berhasil ditambahkan.');
+    }
+
+    function renderProducts() {
+      const productList = document.getElementById('product-list');
+      productList.innerHTML = '';
+
+      products.forEach((product, index) => {
+        const item = document.createElement('li');
+        item.className = 'list-item';
+        item.innerHTML = `<div><strong>${product.nama}</strong><br><span class="muted-text">${formatRupiah(product.harga)} • ${product.deskripsi}</span></div>
+          <div class="actions">
+            <button onclick="editProduk(${index})">Edit</button>
+            <button onclick="hapusProduk(${index})" class="btn-danger">Hapus</button>
+          </div>`;
+        productList.appendChild(item);
+      });
+    }
+
+    function editProduk(index) {
+      const produk = products[index];
+      const namaBaru = prompt('Edit nama produk:', produk.nama);
+      if (!namaBaru) return;
+      const hargaBaru = prompt('Edit harga produk:', produk.harga);
+      if (!hargaBaru) return;
+      const deskripsiBaru = prompt('Edit deskripsi produk:', produk.deskripsi);
+      if (!deskripsiBaru) return;
+      const gambarBaru = prompt('Edit link gambar produk:', produk.gambar);
+      if (!gambarBaru) return;
+
+      products[index] = {
+        nama: namaBaru,
+        harga: Number(hargaBaru),
+        deskripsi: deskripsiBaru,
+        gambar: gambarBaru
+      };
+
+      saveProducts();
+      renderProducts();
+      alert('Produk berhasil diperbarui.');
+    }
+
+    function hapusProduk(index) {
+      if (!confirm('Yakin ingin menghapus produk ini?')) return;
+      products.splice(index, 1);
+      saveProducts();
+      renderProducts();
+    }
+
+    function logoutUser() {
+      localStorage.removeItem('currentUser');
+      window.location.href = 'login.html';
+    }
+
+    document.getElementById('admin-info').textContent = 'Login sebagai ' + currentUser.username + ' (admin). Semua fitur pengelolaan tersedia di halaman ini.';
+    renderUsers();
+    renderProducts();
+  </script>
+</body>
+</html>
